@@ -1,0 +1,97 @@
+/* General styling */
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f0f0f0;
+    margin: 0;
+    padding: 0;
+}
+
+.container1 {
+    width: 80%;
+    margin: 0 auto;
+    background-color: white;
+    padding: 20px;
+    text-align: center;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    margin-top: 50px;
+}
+
+h1 {
+    color: #333;
+    font-size: 2em;
+}
+
+p {
+    color: #777;
+    font-size: 1.2em;
+}
+
+input[type="file"] {
+    padding: 10px;
+    margin: 20px 0;
+}
+
+button {
+    padding: 10px 20px;
+    background-color: #007bff;
+    border: none;
+    color: white;
+    font-size: 1.2em;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+#result {
+    margin-top: 20px;
+    font-size: 1.5em;
+    color: #007bff;
+}
+.custom-shadow{
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1), 0 12px 24px rgba(0, 0, 0, 0.2);
+}
+
+/* Initially hide the container */
+#workshopContainer {
+    display: none; /* Hidden by default */
+    opacity: 0;    /* Start with 0 opacity */
+    transform: translateY(-20px);  /* Start with a slight offset */
+    transition: opacity 0.5s ease, transform 0.5s ease; /* Smooth transition */
+}
+
+/* Add a class to show the container with an animation */
+#workshopContainer.show {
+    display: block; /* Show the container */
+    opacity: 1;     /* Fade in */
+    transform: translateY(0); /* Move the container to its final position */
+}
+.wrap-text{
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.find-button {
+    background-color: gray; /* Gray color for the button */
+    border-radius: 12px; /* Curved edges */
+    padding: 10px 20px; /* Add some padding for better appearance */
+    color: white; /* Text color inside the button */
+    border: none; /* Remove the default border */
+    font-size: 16px; /* Adjust font size */
+    cursor: pointer; /* Change cursor to a pointer when hovering */
+    transition: background-color 0.3s; /* Smooth transition for hover effect */
+}
+
+.find-button:hover {
+    background-color: darkgray; /* Change to a darker gray on hover */
+}
+.btn-container {
+    display: flex;
+    justify-content: center; /* Centers the button horizontally */
+    margin-top: 10px;
+    margin-bottom: 10px;
+    align-items: center; /* Centers the button vertically */
+     /* This will center the button vertically within the full height of the viewport */
+}
+
