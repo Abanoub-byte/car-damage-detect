@@ -1,68 +1,101 @@
-document.getElementById("uploadForm").addEventListener("submit", function(event) {
+document.getElementById("uploadForm").addEventListener("submit", function (event) {
     event.preventDefault();
 
     const formData = new FormData();
     formData.append("image", document.getElementById("image").files[0]);
 
-    // Send the image to the classification model for prediction
+    // Send the image to the classification model
     fetch("/predict_damage", {
         method: "POST",
         body: formData
     })
-    .then(response => response.json())  
+    .then(response => response.json())
     .then(data => {
         const prediction = data.prediction;
 
         // Display the classification result
         document.getElementById("result").innerHTML = `<h2>Classification Result: ${prediction}</h2>`;
 
-        // If the car is damaged, fetch the segmented image
         if (prediction === "Damaged") {
+            // Fetch segmented image
             fetch("/predict_segmented_damage", {
                 method: "POST",
                 body: formData
             })
-            .then(response => response.blob())  // Expecting a PNG image blob
+            .then(response => response.blob())
             .then(blob => {
                 const imgURL = URL.createObjectURL(blob);
-                // Display the segmented image
-                document.getElementById("segmentationResult").innerHTML = `<h2>Segmented Image:</h2><img src="${imgURL}" alt="Segmented Output" style="width: 400px; height: auto;">`;
+                document.getElementById("segmentationResult").innerHTML = `
+                    <h2>Segmented Image:</h2>
+                    <img src="${imgURL}" alt="Segmented Output" style="width: 400px; height: auto;">
+                `;
+
+                // Show and activate the PDF download button
+                document.getElementById("pdfButtonContainer").style.display = "block";
+                const downloadBtn = document.getElementById("downloadPdfBtn");
+
+                // Remove any previous handlers to avoid duplicates
+                downloadBtn.onclick = null;
+
+                // Attach new handler
+                downloadBtn.onclick = function () {
+                    fetch("/download_pdf", {
+                        method: "POST",
+                        body: formData
+                    })
+                    .then(response => response.blob())
+                    .then(blob => {
+                        const pdfURL = URL.createObjectURL(blob);
+                        const a = document.createElement("a");
+                        a.href = pdfURL;
+                        a.download = "car_damage_report.pdf";
+                        document.body.appendChild(a);
+                        a.click();
+                        a.remove();
+                    })
+                    .catch(error => {
+                        alert("Failed to download PDF: " + error);
+                    });
+                };
             })
             .catch(error => {
                 document.getElementById("segmentationResult").innerHTML = `<h2>Error: ${error}</h2>`;
             });
+        } else {
+            // Hide the PDF button if car is not damaged
+            document.getElementById("pdfButtonContainer").style.display = "none";
+            document.getElementById("segmentationResult").innerHTML = "";
         }
     })
     .catch(error => {
         document.getElementById("result").innerHTML = `<h2>Error: ${error}</h2>`;
     });
 });
+
+// Location handling
 document.getElementById('getLocation').addEventListener('click', function () {
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
             var lat = position.coords.latitude;
             var lon = position.coords.longitude;
 
-            // Show the container with animation
             var container = document.getElementById('workshopContainer');
-            container.classList.add('show'); // Add 'show' class to make it visible with animation
-
-            // Perform the search for nearby workshops
+            container.classList.add('show');
             searchNearbyPlaces(lat, lon);
         }, function () {
             alert("Error: Unable to retrieve your location. Defaulting to Moscow.");
             var container = document.getElementById('workshopContainer');
-            container.classList.add('show'); // Add 'show' class to make it visible with animation
-            searchNearbyPlaces(55.7558, 37.6173); // Default to Moscow if geolocation fails
+            container.classList.add('show');
+            searchNearbyPlaces(55.7558, 37.6173);
         });
     } else {
         alert("Geolocation is not supported by this browser.");
     }
 });
 
-// Function to search for workshops near a location using 2GIS API
+// Workshop API logic
 function searchNearbyPlaces(lat, lon) {
-    var query = "workshop"; // Search for "workshop" (you can change this to any category like "car repair")
+    var query = "workshop";
     var url = `https://catalog.api.2gis.com/3.0/items?q=${query}&location=${lon},${lat}&key=314f8042-93f7-4fc3-b34e-3124b2e61c44`;
 
     fetch(url)
@@ -86,7 +119,7 @@ function createPlaceElement(place) {
             </svg>
             <div class="pb-3 mb-0 small lh-sm border-bottom w-100">
                 <div class="d-flex justify-content-between">
-                   <strong class="text-gray-dark flex-shrink-0" style="flex-basis: 50%; overflow-wrap: break-word;">${place.name}</strong>
+                    <strong class="text-gray-dark flex-shrink-0" style="flex-basis: 50%; overflow-wrap: break-word;">${place.name}</strong>
                     <a href="#" onclick="openIn2GIS('${place.address_name}')">View on map</a>
                 </div>
                 <span class="d-block">${place.address_name} ${place.address_comment}</span>
@@ -97,19 +130,17 @@ function createPlaceElement(place) {
 
 function displayResults(places) {
     var resultsDiv = document.getElementById('results');
-    resultsDiv.innerHTML = '';  // Clear previous results
+    resultsDiv.innerHTML = '';
 
     if (places && places.length > 0) {
         places.forEach(place => {
-            var placeHTML = createPlaceElement(place);
-            resultsDiv.innerHTML += placeHTML; // Append the new content to results div
+            resultsDiv.innerHTML += createPlaceElement(place);
         });
     } else {
         resultsDiv.innerHTML = 'No workshops found nearby.';
     }
 }
 
-// Function to open the place on 2GIS Maps when the button is clicked
 function openIn2GIS(placeId) {
     var url = `https://2gis.ru/moscow/search/${placeId}`;
     window.open(url, '_blank');

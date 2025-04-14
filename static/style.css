@@ -72,6 +72,31 @@ button:hover {
     overflow-wrap: break-word;
 }
 
+.submit-btn{
+    background-color: gray;
+    border-radius: 12px;
+}
+
+.submit-btn:hover{
+    background-color: darkgrey;
+}
+
+.download-btn {
+    background-color: gray; /* Gray color for the button */
+    border-radius: 12px; /* Curved edges */
+    padding: 10px 25px; /* Add some padding for better appearance */
+
+    color: white; /* Text color inside the button */
+    border: none; /* Remove the default border */
+    font-size: 16px; /* Adjust font size */
+    cursor: pointer; /* Change cursor to a pointer when hovering */
+    transition: background-color 0.3s; /* Smooth transition for hover effect */
+}
+
+.download-btn:hover  {
+    background-color: darkgray; /* Change to a darker gray on hover */
+}
+
 .find-button {
     background-color: gray; /* Gray color for the button */
     border-radius: 12px; /* Curved edges */
@@ -86,6 +111,7 @@ button:hover {
 .find-button:hover {
     background-color: darkgray; /* Change to a darker gray on hover */
 }
+
 .btn-container {
     display: flex;
     justify-content: center; /* Centers the button horizontally */

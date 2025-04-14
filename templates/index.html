@@ -15,18 +15,23 @@
         <!-- Image upload form -->
         <form id="uploadForm" enctype="multipart/form-data">
             <input type="file" id="image" name="image" accept="image/*" required>
-            <button type="submit">Submit</button>
+            <button type="submit" class="submit-btn">Submit</button>
         </form>
 
         <!-- Display classification and segmentation results -->
         <div id="result"></div>
         <div id="segmentationResult"></div>
     </div>
+    
+    <!-- PDF download button (initially hidden) -->
+    <div id="pdfButtonContainer" class="text-center" style=" margin-top: 20px;">
+        <button id="downloadPdfBtn" class="download-btn">Download PDF Report</button>
+    </div>
 
     <div class="btn-container"> 
         <button id="getLocation" class="find-button">Find Nearby Workshops</button>
     </div>
-   
+
 
     <!-- Initially hidden container with transition effect -->
     <div class="container my-4" id="workshopContainer">

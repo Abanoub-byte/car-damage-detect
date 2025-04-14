@@ -16,12 +16,12 @@ import tempfile
 
 app = Flask(__name__)
 
-# Load classification model
+    # Load classification model
 MODEL_PATH = "car_damage_model.keras_FILES/car_damage_classification_model.h5"
 model = tf.keras.models.load_model(MODEL_PATH)
 CATEGORIES = ["Damaged", "Not Damaged"]
 
-# Load segmentation model once
+    # Load segmentation model once
 MODEL_PATH2 = "segemntaion_model/model_final(1).pth"
 CONFIG_PATH = "segemntaion_model/config.yaml"
 
@@ -36,55 +36,57 @@ predictor = DefaultPredictor(cfg)
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+        return render_template("index.html")
 
 
 @app.route("/predict_damage", methods=["POST"])
 def predict_damage():
-    if "image" not in request.files:
-        return jsonify({"error": "No image uploaded"}), 400
+        if "image" not in request.files:
+            return jsonify({"error": "No image uploaded"}), 400
 
-    file = request.files["image"]
-    image = Image.open(file).convert("RGB").resize((224, 224))  # Convert to RGB & resize
-    image_array = np.array(image) / 255.0  # Normalize
-    image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
-    
-    # Make prediction
-    prediction = model.predict(image_array)
-    result = CATEGORIES[np.argmax(prediction)]
+        file = request.files["image"]
+        image = Image.open(file).convert("RGB").resize((224, 224))  # Convert to RGB & resize
+        image_array = np.array(image) / 255.0  # Normalize
+        image_array = np.expand_dims(image_array, axis=0)  # Add batch dimension
+        
+        # Make prediction
+        prediction = model.predict(image_array)
+        result = CATEGORIES[np.argmax(prediction)]
 
-    # If Damaged, trigger segmentation
-    if result == "Damaged":
-        return jsonify({"prediction": result, "segmentation": "/predict_segmented_damage"})
-    
-    return jsonify({"prediction": result})
+        # If Damaged, trigger segmentation
+        if result == "Damaged":
+            return jsonify({"prediction": result, "segmentation": "/predict_segmented_damage"})
+        
+        return jsonify({"prediction": result})
 
 
 @app.route("/predict_segmented_damage", methods=["POST"])
 def predict_segmented_damage():
-    if "image" not in request.files:
-        return "No image uploaded", 400
+        if "image" not in request.files:
+            return "No image uploaded", 400
 
-    file = request.files["image"]
-    image = Image.open(file).convert("RGB")
-    image = np.array(image)
+        file = request.files["image"]
+        image = Image.open(file).convert("RGB")
+        image = np.array(image)
 
-    # Get model prediction
-    outputs = predictor(image)
-    instances = outputs["instances"].to("cpu")
+        # Get model prediction
+        outputs = predictor(image)
+        instances = outputs["instances"].to("cpu")
 
-    # Visualize predictions with bounding boxes and labels
-    v = Visualizer(image[:, :, ::-1], scale=0.5, instance_mode=ColorMode.IMAGE_BW)
-    out = v.draw_instance_predictions(instances)
+        # Visualize predictions with bounding boxes and labels
+        v = Visualizer(image[:, :, ::-1], scale=0.5, instance_mode=ColorMode.IMAGE_BW)
+        out = v.draw_instance_predictions(instances)
 
-    # Save the image with bounding boxes to a buffer
-    img_byte_arr = io.BytesIO()
-    Image.fromarray(out.get_image()[:, :, ::-1]).save(img_byte_arr, format="PNG")
-    img_byte_arr.seek(0)
+        # Save the image with bounding boxes to a buffer
+        img_byte_arr = io.BytesIO()
+        Image.fromarray(out.get_image()[:, :, ::-1]).save(img_byte_arr, format="PNG")
+        img_byte_arr.seek(0)
 
-    # Return the segmented image to be displayed on the website
-    return send_file(img_byte_arr, mimetype="image/png")
+        # Return the segmented image to be displayed on the website
+        return send_file(img_byte_arr, mimetype="image/png")
 
+
+from datetime import datetime
 
 @app.route("/download_pdf", methods=["POST"])
 def download_pdf():
@@ -92,42 +94,54 @@ def download_pdf():
         return "No image uploaded", 400
 
     file = request.files["image"]
-    image = Image.open(file).convert("RGB")
-    image = np.array(image)
+    pil_image = Image.open(file).convert("RGB")
 
-    # Get model prediction
-    outputs = predictor(image)
+    # Classification
+    image_for_classification = pil_image.resize((224, 224))
+    image_array = np.array(image_for_classification) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
+    prediction = model.predict(image_array)
+    result = CATEGORIES[np.argmax(prediction)]
+
+    # Segmentation
+    image_for_segmentation = np.array(pil_image)
+    outputs = predictor(image_for_segmentation)
     instances = outputs["instances"].to("cpu")
 
-    # Visualize predictions with bounding boxes and labels
-    v = Visualizer(image[:, :, ::-1], scale=0.5, instance_mode=ColorMode.IMAGE_BW)
+    v = Visualizer(image_for_segmentation[:, :, ::-1], scale=0.5, instance_mode=ColorMode.IMAGE_BW)
     out = v.draw_instance_predictions(instances)
 
-    # Save the image with bounding boxes to a buffer
+    # Save the segmented image to buffer
     img_byte_arr = io.BytesIO()
     Image.fromarray(out.get_image()[:, :, ::-1]).save(img_byte_arr, format="PNG")
     img_byte_arr.seek(0)
 
-    # Create PDF with the result and segmented image
+    # Create the PDF
     pdf_byte_arr = io.BytesIO()
     c = canvas.Canvas(pdf_byte_arr, pagesize=letter)
 
-    c.setFont("Helvetica", 12)
-    c.drawString(50, 750, "Car is Damaged.")
+    # Add Date/Time
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    c.setFont("Helvetica-Bold", 14)
+    c.drawString(50, 780, f"Report Generated: {now}")
 
-    with tempfile.NamedTemporaryFile(delete=False, suffix=".png")as temp_img_file:
+    # Add Prediction Result
+    c.setFont("Helvetica", 12)
+    c.drawString(50, 750, f"Car Damage Prediction: {result}")
+
+    # Add Segmented Image
+    with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_img_file:
         temp_img_file.write(img_byte_arr.getvalue())
         temp_img_file.close()
 
         c.drawImage(temp_img_file.name, 50, 400, width=500, height=300)
-    
-    
+
     c.showPage()
     c.save()
     pdf_byte_arr.seek(0)
 
-    # Return the PDF as a downloadable file
     return send_file(pdf_byte_arr, as_attachment=True, download_name="car_report.pdf", mimetype="application/pdf")
+
 
 
 if __name__ == "__main__":
