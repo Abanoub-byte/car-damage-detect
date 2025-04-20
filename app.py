@@ -13,6 +13,7 @@ from reportlab.pdfgen import canvas
 import io
 import torch
 import tempfile
+from reportlab.lib.colors import black, grey
 
 app = Flask(__name__)
 
@@ -96,14 +97,14 @@ def download_pdf():
     file = request.files["image"]
     pil_image = Image.open(file).convert("RGB")
 
-    # Classification
+    # --- Classification ---
     image_for_classification = pil_image.resize((224, 224))
     image_array = np.array(image_for_classification) / 255.0
     image_array = np.expand_dims(image_array, axis=0)
     prediction = model.predict(image_array)
     result = CATEGORIES[np.argmax(prediction)]
 
-    # Segmentation
+    # --- Segmentation ---
     image_for_segmentation = np.array(pil_image)
     outputs = predictor(image_for_segmentation)
     instances = outputs["instances"].to("cpu")
@@ -111,37 +112,68 @@ def download_pdf():
     v = Visualizer(image_for_segmentation[:, :, ::-1], scale=0.5, instance_mode=ColorMode.IMAGE_BW)
     out = v.draw_instance_predictions(instances)
 
-    # Save the segmented image to buffer
+    # Save segmented image to buffer
     img_byte_arr = io.BytesIO()
     Image.fromarray(out.get_image()[:, :, ::-1]).save(img_byte_arr, format="PNG")
     img_byte_arr.seek(0)
 
-    # Create the PDF
+    # --- Create PDF ---
     pdf_byte_arr = io.BytesIO()
     c = canvas.Canvas(pdf_byte_arr, pagesize=letter)
+    location_text = request.form.get("location","" )
 
-    # Add Date/Time
+    # Draw gray rectangle header
+    c.setFillColorRGB(0.8, 0.8, 0.8)  # Light gray
+    c.rect(40, 750, 520, 40, fill=1, stroke=0)
+
+    # Title text
+    c.setFillColor(black)
+    c.setFont("Helvetica-Bold", 18)
+    c.drawString(50, 760, "Car report")
+
+    # Fields with lines
+    y = 700
+    spacing = 40
+
+    # Date and Time
     now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    c.setFont("Helvetica-Bold", 14)
-    c.drawString(50, 780, f"Report Generated: {now}")
-
-    # Add Prediction Result
     c.setFont("Helvetica", 12)
-    c.drawString(50, 750, f"Car Damage Prediction: {result}")
+    c.drawString(50, y, "Date and Time :")
+    c.drawString(180, y, now)
+    c.setLineWidth(0.5)
+    c.line(50, y - 5, 500, y - 5)
 
-    # Add Segmented Image
+    # Location (empty for user input)
+    y -= spacing
+    c.drawString(50, y, "Location :")
+    if location_text:
+         c.drawString(180, y, location_text)
+ 
+    c.setLineWidth(0.5)
+    c.line(50, y - 5, 500, y - 5)
+
+    # Severity of Damage
+    y -= spacing
+    c.drawString(50, y, "Severity of damage :")
+    c.drawString(180, y, result)
+    c.setLineWidth(0.5)
+    c.line(50, y - 5, 500, y - 5)
+
+    # Image section
+    y -= spacing
+    c.drawString(50, y, "Image of car with damaged parts :")
+
+    # Draw image
     with tempfile.NamedTemporaryFile(delete=False, suffix=".png") as temp_img_file:
         temp_img_file.write(img_byte_arr.getvalue())
         temp_img_file.close()
-
-        c.drawImage(temp_img_file.name, 50, 400, width=500, height=300)
+        c.drawImage(temp_img_file.name, 50, y - 320, width=400, height=250)
 
     c.showPage()
     c.save()
     pdf_byte_arr.seek(0)
 
     return send_file(pdf_byte_arr, as_attachment=True, download_name="car_report.pdf", mimetype="application/pdf")
-
 
 
 if __name__ == "__main__":

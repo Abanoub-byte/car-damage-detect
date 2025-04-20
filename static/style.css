@@ -70,6 +70,7 @@ button:hover {
 .wrap-text{
     word-wrap: break-word;
     overflow-wrap: break-word;
+    width: 600px;
 }
 
 .submit-btn{
